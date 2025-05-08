@@ -1,0 +1,49 @@
+import pandas as pd
+from datetime import datetime, timedelta
+import os
+import time
+import traceback
+
+try:
+    # Define o caminho do arquivo original
+    caminho_arquivo = r"C:\Users\leosouza\Arcor\GC_BR_Planejamento_Logístico - Documentos\3. BRA-Roteirizacao\Ordens de Coleta 2025\05 CD CTG\ORDEM DE COLETA CTG.xlsx"
+
+    # Calcula a data de amanhã (D+1)
+    amanha = str(int((datetime.today() + timedelta(days=1)).strftime('%d')))
+    print(f"Aba esperada: '{amanha}'")
+
+    # Abre o Excel
+    xls = pd.ExcelFile(caminho_arquivo)
+
+    # Verifica se a aba de amanhã existe
+    if amanha in xls.sheet_names:
+        df = pd.read_excel(caminho_arquivo, sheet_name=amanha, header=14)
+        df.columns = [col.strip().upper() for col in df.columns]
+
+        # Aplica filtros
+        df_filtrado = df[
+            (df['TRANSP.'] == 'MVC') & 
+            (~df['EMAIL OK'].isin(['SEPARAR', 'FATURAR']))
+        ]
+
+        # Caminho para a pasta do OneDrive onde o Power Automate irá buscar o arquivo
+        pasta_onedrive = r"C:\Users\leosouza\OneDrive - Arcor\Documentos\PowerAutomate"
+        os.makedirs(pasta_onedrive, exist_ok=True)
+
+        # Nome e caminho completo do arquivo de saída
+        nome_saida = f"Grade_MVC_{amanha}.xlsx"
+        caminho_saida = os.path.join(pasta_onedrive, nome_saida)
+
+        if not df_filtrado.empty:
+            df_filtrado.to_excel(caminho_saida, index=False, engine='openpyxl')
+            print(f"Grade de {amanha} salva em: {caminho_saida}.")
+        else:
+            print("Nenhum dado encontrado após os filtros. Arquivo não foi salvo.")
+    else:
+        print(f"Aba '{amanha}' não encontrada no arquivo.")
+
+except Exception as e:
+    # Cria log de erro
+    with open(r"C:\Users\leosouza\erro_script.txt", "w") as f:
+        f.write("Erro ao executar script:\n")
+        f.write(traceback.format_exc())
