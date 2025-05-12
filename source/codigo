@@ -11,13 +11,11 @@ try:
     amanha = str(int((datetime.today() + timedelta(days=1)).strftime('%d')))
     print(f"Aba esperada: '{amanha}'")
 
-    # Lê os dados a partir da linha 15 como header
     df = pd.read_excel(caminho_arquivo, sheet_name=amanha, header=14)
     df.columns = [col.strip().upper() for col in df.columns]
 
-    # Aplica filtro
     df_filtrado = df[
-        (df['TRANSP.'] == 'MVC') &
+        (df['TRANSP.'] == 'MVC') & 
         (~df['EMAIL OK'].isin(['SEPARAR', 'FATURAR']))
     ]
 
@@ -31,11 +29,10 @@ try:
         ws_novo = wb_novo.active
         ws_novo.title = amanha
 
-        # Cabeçalho: linha 15 da original vira linha 1 da nova
+        # Cabeçalho
         for col_idx, col_name in enumerate(df_filtrado.columns, start=1):
             cell = ws_novo.cell(row=1, column=col_idx, value=col_name)
             ref_cell = ws_origem.cell(row=15, column=col_idx)
-
             cell.font = copy(ref_cell.font)
             cell.border = copy(ref_cell.border)
             cell.fill = copy(ref_cell.fill)
@@ -43,12 +40,11 @@ try:
             cell.protection = copy(ref_cell.protection)
             cell.alignment = copy(ref_cell.alignment)
 
-        # Dados: linha 16+ da original viram linha 2+ na nova
+        # Dados
         for r_idx, row in enumerate(dataframe_to_rows(df_filtrado, index=False, header=False), start=2):
             for c_idx, value in enumerate(row, start=1):
                 new_cell = ws_novo.cell(row=r_idx, column=c_idx, value=value)
-                ref_cell = ws_origem.cell(row=r_idx + 14, column=c_idx)  # 16 na original
-
+                ref_cell = ws_origem.cell(row=r_idx + 14, column=c_idx)
                 new_cell.font = copy(ref_cell.font)
                 new_cell.border = copy(ref_cell.border)
                 new_cell.fill = copy(ref_cell.fill)
@@ -56,21 +52,25 @@ try:
                 new_cell.protection = copy(ref_cell.protection)
                 new_cell.alignment = copy(ref_cell.alignment)
 
-        # Copia largura das colunas
+        # Largura das colunas
         for col_letter, dim in ws_origem.column_dimensions.items():
             ws_novo.column_dimensions[col_letter].width = dim.width
 
-        # Copia altura das linhas a partir da 15 (titulo) e abaixo
+        # Altura das linhas
         for row_idx, dim in ws_origem.row_dimensions.items():
             if row_idx >= 15:
                 ws_novo.row_dimensions[row_idx - 14].height = dim.height
 
-        # Salva
+        # Salvar com segurança
         pasta_onedrive = r"C:\Users\leosouza\OneDrive - Arcor\Documentos\PowerAutomate"
         os.makedirs(pasta_onedrive, exist_ok=True)
+
         nome_saida = f"Grade_MVC_{amanha}.xlsx"
         caminho_saida = os.path.join(pasta_onedrive, nome_saida)
-        wb_novo.save(caminho_saida)
+        caminho_temp = os.path.join(pasta_onedrive, f"__temp_{nome_saida}")
+
+        wb_novo.save(caminho_temp)
+        os.replace(caminho_temp, caminho_saida)
 
         print(f"✅ Arquivo final salvo com sucesso em: {caminho_saida}")
 
